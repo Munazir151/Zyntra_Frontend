@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Video, CheckCircle2, AlertCircle, Loader2, User, Shield, Download, Trash2, RefreshCw } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Upload, Video, CheckCircle2, AlertCircle, Loader2, User, Shield, Download } from 'lucide-react';
+import UserProfile from './user/UserProfile';
 
 const GaitRecognition = ({ userRole = 'user' }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -9,9 +10,7 @@ const GaitRecognition = ({ userRole = 'user' }) => {
   const [dragActive, setDragActive] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userProfile, setUserProfile] = useState(null);
-  const [profileStatus, setProfileStatus] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [loading, setLoading] = useState(true);
   const stopPollingRef = useRef(false);
 
   useEffect(() => {
@@ -25,175 +24,21 @@ const GaitRecognition = ({ userRole = 'user' }) => {
       const parsedData = JSON.parse(userData);
       if (parsedData.email?.toLowerCase().includes('admin')) {
         setIsAdmin(true);
-      } else {
-        // For regular users, fetch their profile status on load
-        fetchUserProfile();
       }
     }
+    
+    setLoading(false);
   }, []);
 
-  const fetchUserProfile = async () => {
-    setLoadingProfile(true);
-    try {
-      const authToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
-      
-      if (!authToken) {
-        console.log('No auth token found');
-        return;
-      }
+  // If not admin, show UserProfile page instead
+  if (!loading && !isAdmin) {
+    return <UserProfile />;
+  }
 
-      // First check profile status
-      const statusResponse = await fetch('https://aaa95094eca4.ngrok-free.app/gait/profile-status', {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'accept': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        }
-      });
-
-      if (statusResponse.ok) {
-        const statusData = await statusResponse.json();
-        setProfileStatus(statusData);
-        console.log('Profile status:', statusData);
-
-        // If profile exists, fetch full profile details
-        if (statusData.status !== 'not_found') {
-          const profileResponse = await fetch('https://aaa95094eca4.ngrok-free.app/gait/user-profile', {
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'accept': 'application/json',
-              'ngrok-skip-browser-warning': 'true'
-            }
-          });
-
-          if (profileResponse.ok) {
-            const profileData = await profileResponse.json();
-            setUserProfile(profileData);
-            console.log('User profile:', profileData);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    } finally {
-      setLoadingProfile(false);
-    }
-  };
-
-  const deleteUserProfile = async () => {
-    if (!window.confirm('Are you sure you want to delete your gait profile? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      const authToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
-      
-      const response = await fetch('https://aaa95094eca4.ngrok-free.app/gait/user-profile', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'accept': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Profile deleted:', data);
-        setUserProfile(null);
-        setProfileStatus({ status: 'not_found', message: 'No gait profile found' });
-        setUploadStatus({ type: 'success', message: data.message || 'Profile deleted successfully' });
-      } else {
-        throw new Error('Failed to delete profile');
-      }
-    } catch (error) {
-      console.error('Error deleting profile:', error);
-      setUploadStatus({ type: 'error', message: 'Failed to delete profile' });
-    }
-  };
-
-  const pollProfileStatus = async (authToken) => {
-    let attempts = 0;
-    const maxAttempts = 60; // Poll for up to 2 minutes (every 2 seconds)
-    
-    console.log('🔄 Starting to poll profile status...');
-    
-    const checkStatus = async () => {
-      if (attempts >= maxAttempts) {
-        console.log('⏱️ Polling timeout reached');
-        setUploadStatus({ 
-          type: 'success', 
-          message: 'Processing is taking longer than expected. Please refresh manually.' 
-        });
-        return;
-      }
-      
-      attempts++;
-      console.log(`📊 Checking profile status (attempt ${attempts}/${maxAttempts})...`);
-      
-      try {
-        const statusResponse = await fetch('https://aaa95094eca4.ngrok-free.app/gait/profile-status', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'accept': 'application/json',
-            'ngrok-skip-browser-warning': 'true'
-          }
-        });
-        
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json();
-          console.log('Profile status:', statusData.status);
-          
-          if (statusData.status === 'completed') {
-            console.log('✅ Profile processing completed!');
-            setUploadStatus({ 
-              type: 'success', 
-              message: '✅ Profile completed! Your gait profile is ready.' 
-            });
-            
-            // Refresh the profile to show updated information
-            await fetchUserProfile();
-            
-            // Clear the processing message after a few seconds
-            setTimeout(() => {
-              setAnalysisResult(null);
-            }, 1000);
-            
-            return; // Stop polling
-          } else if (statusData.status === 'processing') {
-            console.log('⏳ Still processing...');
-            setUploadStatus({ 
-              type: 'success', 
-              message: `Processing your video... (${attempts * 2}s elapsed)` 
-            });
-            
-            // Continue polling
-            setTimeout(checkStatus, 2000);
-          } else if (statusData.status === 'failed' || statusData.status === 'error') {
-            console.error('❌ Processing failed');
-            setUploadStatus({ 
-              type: 'error', 
-              message: 'Profile processing failed. Please try again.' 
-            });
-            setAnalysisResult(null);
-            return;
-          } else {
-            // Unknown status, continue polling
-            setTimeout(checkStatus, 2000);
-          }
-        } else {
-          console.error('Failed to fetch profile status');
-          setTimeout(checkStatus, 2000);
-        }
-      } catch (error) {
-        console.error('Error polling profile status:', error);
-        setTimeout(checkStatus, 2000);
-      }
-    };
-    
-    // Start polling after initial delay
-    setTimeout(checkStatus, 2000);
-  };
+  // Return null while loading
+  if (loading) {
+    return null;
+  }
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -255,18 +100,13 @@ const GaitRecognition = ({ userRole = 'user' }) => {
         return;
       }
 
-      // Upload video - use different endpoint based on user role
+      // Upload video
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const uploadEndpoint = isAdmin 
-        ? 'https://aaa95094eca4.ngrok-free.app/gait/upload-cctv-video'
-        : 'https://aaa95094eca4.ngrok-free.app/gait/upload-user-video';
-
       console.log('Uploading file:', selectedFile.name, 'Size:', selectedFile.size);
-      console.log('User role:', isAdmin ? 'Admin' : 'User', 'Endpoint:', uploadEndpoint);
 
-      const uploadResponse = await fetch(uploadEndpoint, {
+      const uploadResponse = await fetch('https://aaa95094eca4.ngrok-free.app/gait/upload-cctv-video', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -295,45 +135,18 @@ const GaitRecognition = ({ userRole = 'user' }) => {
 
       const uploadData = await uploadResponse.json();
       console.log('Upload success - Full response:', uploadData);
-      
-      // For user uploads, log_id might be null initially (background processing)
       const logId = uploadData.log_id;
-      const profileId = uploadData.profile_id;
 
       console.log('Extracted log_id:', logId);
-      console.log('Extracted profile_id:', profileId);
-      console.log('Upload message:', uploadData.message);
-      console.log('Status:', uploadData.status);
 
-      // For regular users, if log_id is null, it's processing in background
-      if (!logId && !isAdmin) {
-        setUploadStatus({ 
-          type: 'success', 
-          message: uploadData.message || 'Video uploaded successfully. Processing in background.' 
-        });
-        setAnalysisResult({
-          confidence: 0,
-          gaitPattern: 'Processing in Background',
-          metrics: {
-            'Status': 'Processing',
-            'Message': 'Your video is being processed. Check back later.'
-          },
-          processedVideoUrl: null
-        });
-        
-        // Start polling for profile status completion
-        pollProfileStatus(authToken);
-        
-        setUploading(false);
-        return; // Exit early for background processing
-      }
-
-      if (!logId && isAdmin) {
+      if (!logId) {
         console.error('Available keys in response:', Object.keys(uploadData));
         throw new Error('No log_id returned from upload. Check console for response data.');
       }
 
       console.log('Using log_id:', logId);
+      console.log('Upload message:', uploadData.message);
+      console.log('Status:', uploadData.status);
       setUploadStatus({ type: 'success', message: `${uploadData.message} (Log ID: ${logId})` });
 
       // Poll for recognition status
@@ -496,115 +309,25 @@ const GaitRecognition = ({ userRole = 'user' }) => {
               <User className="w-10 h-10 text-forest-light" />
             )}
             <h1 className="text-4xl md:text-5xl font-black text-forest-light">
-              Profile
+              Gait Recognition
             </h1>
           </div>
           <p className="text-lg text-forest-light/70 max-w-2xl mx-auto">
             {isAdmin 
               ? 'Admin Dashboard - Manage and analyze all gait recognition data'
-              : 'Manage your gait profile for AI-powered recognition and security'
+              : 'Upload your gait video for AI-powered analysis and health insights'
             }
           </p>
+          <div className="mt-4">
+            <span className={`inline-block px-4 py-2 rounded-full text-sm font-semibold ${
+              isAdmin 
+                ? 'bg-sunlight-yellow/20 text-sunlight-yellow border border-sunlight-yellow/30'
+                : 'bg-forest-light/20 text-forest-light border border-forest-light/30'
+            }`}>
+              {isAdmin ? 'Admin Access' : 'User Mode'}
+            </span>
+          </div>
         </motion.div>
-
-        {/* User Profile Section - Only for regular users */}
-        {!isAdmin && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="glass-card p-6 rounded-3xl border border-forest-light/20 shadow-2xl mb-8"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-forest-light flex items-center gap-2">
-                <User className="w-6 h-6" />
-                My Gait Profile
-              </h2>
-              <button
-                onClick={fetchUserProfile}
-                disabled={loadingProfile}
-                className="flex items-center gap-2 px-4 py-2 bg-forest-light/10 text-forest-light rounded-xl font-semibold hover:bg-forest-light/20 transition-all disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${loadingProfile ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-            </div>
-
-            <AnimatePresence mode="wait">
-              {loadingProfile ? (
-                <motion.div
-                  key="loading"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-center py-8"
-                >
-                  <Loader2 className="w-8 h-8 text-forest-light animate-spin mx-auto mb-2" />
-                  <p className="text-forest-light/60">Loading profile...</p>
-                </motion.div>
-              ) : userProfile ? (
-                <motion.div
-                  key="profile-exists"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-4"
-                >
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="bg-forest-light/5 rounded-xl p-4 border border-forest-light/10">
-                      <p className="text-forest-light/60 text-sm mb-1">Profile ID</p>
-                      <p className="text-forest-light font-semibold">#{userProfile.id}</p>
-                    </div>
-                    <div className="bg-forest-light/5 rounded-xl p-4 border border-forest-light/10">
-                      <p className="text-forest-light/60 text-sm mb-1">Created</p>
-                      <p className="text-forest-light font-semibold">
-                        {new Date(userProfile.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="bg-forest-light/5 rounded-xl p-4 border border-forest-light/10">
-                      <p className="text-forest-light/60 text-sm mb-1">Embedding Size</p>
-                      <p className="text-forest-light font-semibold">{userProfile.embedding_dimension}D</p>
-                    </div>
-                    <div className="bg-forest-light/5 rounded-xl p-4 border border-forest-light/10">
-                      <p className="text-forest-light/60 text-sm mb-1">Status</p>
-                      <p className="text-green-400 font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Active
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between pt-4 border-t border-forest-light/10">
-                    <p className="text-forest-light/70 text-sm">
-                      Your gait profile is active and ready for recognition
-                    </p>
-                    <button
-                      onClick={deleteUserProfile}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 rounded-xl font-semibold hover:bg-red-500/20 transition-all border border-red-500/30"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete Profile
-                    </button>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="no-profile"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-center py-8 bg-forest-light/5 rounded-xl border border-forest-light/10"
-                >
-                  <AlertCircle className="w-12 h-12 text-forest-light/50 mx-auto mb-3" />
-                  <p className="text-forest-light font-semibold mb-2">No Gait Profile Found</p>
-                  <p className="text-forest-light/60 text-sm">
-                    Upload a video below to create your gait profile
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )}
 
         {/* Upload Section */}
         <motion.div
@@ -642,15 +365,10 @@ const GaitRecognition = ({ userRole = 'user' }) => {
                   <Upload className="w-20 h-20 text-forest-light mx-auto" />
                 </motion.div>
                 <h3 className="text-2xl font-bold text-forest-light mb-3">
-                  {isAdmin ? 'Upload CCTV Video' : userProfile ? 'Update Gait Profile' : 'Create Gait Profile'}
+                  Upload Gait Video
                 </h3>
                 <p className="text-forest-light/60 mb-6">
-                  {isAdmin 
-                    ? 'Drag and drop CCTV footage here, or click to browse'
-                    : userProfile 
-                      ? 'Upload a new video to update your gait profile'
-                      : 'Upload your gait video to create your unique profile'
-                  }
+                  Drag and drop your video here, or click to browse
                 </p>
                 <button 
                   type="button"
@@ -665,11 +383,6 @@ const GaitRecognition = ({ userRole = 'user' }) => {
                 <p className="text-sm text-forest-light/50 mt-4">
                   Supported formats: MP4, MOV, AVI (Max size: 100MB)
                 </p>
-                {!isAdmin && (
-                  <p className="text-sm text-forest-light/70 mt-2 font-medium">
-                    {userProfile ? '⚠️ This will replace your existing profile' : '✨ First time? Let\'s create your profile!'}
-                  </p>
-                )}
               </div>
             ) : (
               <div className="space-y-6">
@@ -753,6 +466,99 @@ const GaitRecognition = ({ userRole = 'user' }) => {
             </motion.div>
           )}
         </motion.div>
+
+        {/* Analysis Results */}
+        {analysisResult && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="glass-card p-8 rounded-3xl border border-forest-light/20 shadow-2xl"
+          >
+            <h2 className="text-3xl font-bold text-forest-light mb-6">Analysis Results</h2>
+            
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-forest-light/10 rounded-xl p-6 border border-forest-light/20">
+                <p className="text-forest-light/60 text-sm mb-2">Confidence Score</p>
+                <p className="text-4xl font-black text-forest-light">{analysisResult.confidence}%</p>
+              </div>
+              
+              <div className="bg-forest-light/10 rounded-xl p-6 border border-forest-light/20">
+                <p className="text-forest-light/60 text-sm mb-2">Gait Pattern</p>
+                <p className="text-4xl font-black text-green-400">{analysisResult.gaitPattern}</p>
+              </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-forest-light mb-4">Gait Metrics</h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {Object.entries(analysisResult.metrics).map(([key, value]) => (
+                <div key={key} className="bg-forest-light/5 rounded-lg p-4 border border-forest-light/10">
+                  <p className="text-forest-light/60 text-sm capitalize mb-1">
+                    {key.replace(/([A-Z])/g, ' $1').trim()}
+                  </p>
+                  <p className="text-2xl font-bold text-forest-light">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Video Preview & Download */}
+            {analysisResult.processedVideoUrl ? (
+              <div className="mb-8">
+                <h3 className="text-xl font-bold text-forest-light mb-4">Processed Video</h3>
+                {/* Video Preview */}
+                <div className="mb-6 bg-black rounded-xl overflow-hidden border-2 border-forest-light/30 shadow-2xl">
+                  <video 
+                    controls 
+                    autoPlay
+                    className="w-full max-h-[600px] object-contain"
+                    src={analysisResult.processedVideoUrl}
+                    onLoadedData={() => console.log('Video loaded successfully')}
+                    onError={(e) => console.error('Video load error:', e)}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+                
+                {/* Download Button */}
+                <a
+                  href={analysisResult.processedVideoUrl}
+                  download={`processed_log_${analysisResult.logId}.mp4`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-forest-light text-forest-900 rounded-xl font-bold hover:bg-forest-light/90 transition-all shadow-lg"
+                >
+                  <Download className="w-5 h-5" />
+                  Download Processed Video
+                </a>
+                <p className="text-sm text-forest-light/60 mt-2">
+                  Download link expires in 1 hour
+                </p>
+              </div>
+            ) : (
+              analysisResult && !analysisResult.processedVideoUrl && (
+                <div className="mb-8 p-4 bg-forest-light/10 border border-forest-light/20 rounded-xl text-center">
+                  <p className="text-forest-light/70">
+                    Processed video is being prepared. Please refresh or try downloading later.
+                  </p>
+                </div>
+              )
+            )}
+
+            {isAdmin && (
+              <div className="mt-8 p-6 bg-sunlight-yellow/10 border border-sunlight-yellow/30 rounded-xl">
+                <h4 className="text-lg font-bold text-sunlight-yellow mb-3">Admin Actions</h4>
+                <div className="flex gap-4">
+                  <button className="px-6 py-2 bg-sunlight-yellow text-forest-900 rounded-lg font-semibold hover:bg-sunlight-yellow/90 transition-all">
+                    Export Report
+                  </button>
+                  <button className="px-6 py-2 border border-sunlight-yellow/50 text-sunlight-yellow rounded-lg font-semibold hover:bg-sunlight-yellow/10 transition-all">
+                    View Full Analytics
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );
