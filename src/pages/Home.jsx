@@ -1,8 +1,9 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { motion } from 'framer-motion';
 import ForestScene from '../components/ForestScene';
+import ForestFeedback from '../components/ForestFeedback';
 import useStore from '../store/useStore';
 
 const EcoScoreOrb = ({ score, maxScore }) => {
@@ -93,25 +94,66 @@ const LoadingScreen = () => (
 );
 
 const Home = () => {
-  const { ecoScore, maxEcoScore, forestHealth, timeOfDay } = useStore();
+  const { ecoScore, maxEcoScore, forestHealth, activities } = useStore();
+  
+  // Calculate eco actions from recent activities
+  const ecoActions = useMemo(() => {
+    const recentActivities = activities.slice(-10); // Last 10 activities
+    
+    return {
+      lightsOff: recentActivities.some(a => a.type === 'eco-action' && a.notes?.toLowerCase().includes('light')),
+      exercise: recentActivities.some(a => a.type === 'exercise' || a.type === 'meditation'),
+      ecoTravel: recentActivities.some(a => a.type === 'walk' || (a.type === 'eco-action' && a.notes?.toLowerCase().includes('travel'))),
+      longWork: recentActivities.some(a => a.type === 'work' && a.duration > 4),
+    };
+  }, [activities]);
+  
+  // Calculate screen time from recent activities
+  const screenTime = useMemo(() => {
+    const today = new Date().toDateString();
+    const todayActivities = activities.filter(a => new Date(a.date).toDateString() === today);
+    const phoneTime = todayActivities
+      .filter(a => a.type === 'phone')
+      .reduce((sum, a) => sum + a.duration, 0);
+    const workTime = todayActivities
+      .filter(a => a.type === 'work' || a.type === 'sedentary')
+      .reduce((sum, a) => sum + a.duration, 0);
+    return phoneTime + workTime * 0.5; // Work counts as 50% screen time
+  }, [activities]);
   
   return (
     <div className="relative w-full h-screen overflow-hidden pt-28 md:pt-32">
-      {/* Eco Score Display */}
-      <EcoScoreOrb score={ecoScore} maxScore={maxEcoScore} />
+      {/* Forest Feedback Notifications */}
+      <ForestFeedback 
+        ecoActions={ecoActions}
+        screenTime={screenTime}
+        forestHealth={forestHealth}
+      />
       
       {/* 3D Forest Canvas */}
       <Canvas shadows className="w-full h-full">
         <Suspense fallback={null}>
-          <PerspectiveCamera makeDefault position={[0, 5, 15]} />
+          <PerspectiveCamera makeDefault position={[0, 5, 15]} fov={60} />
           <OrbitControls 
-            enablePan={false}
+            enableRotate={true}
+            enablePan={true}
             enableZoom={true}
-            minDistance={10}
-            maxDistance={30}
+            minDistance={8}
+            maxDistance={25}
             maxPolarAngle={Math.PI / 2}
+            minPolarAngle={0}
+            enableDamping={true}
+            dampingFactor={0.05}
+            rotateSpeed={0.5}
+            zoomSpeed={0.8}
+            autoRotate={false}
           />
-          <ForestScene health={forestHealth} timeOfDay={timeOfDay} />
+          <ForestScene 
+            health={forestHealth} 
+            timeOfDay="day"
+            ecoActions={ecoActions}
+            screenTime={screenTime}
+          />
         </Suspense>
       </Canvas>
       
@@ -126,8 +168,7 @@ const Home = () => {
           🌲 Trees: {Math.floor(forestHealth * 30)} / 30
         </p>
         <p className="text-forest-light text-xs mt-1">
-          {timeOfDay === 'day' ? '☀️ Day' : 
-           timeOfDay === 'evening' ? '🌅 Evening' : '🌙 Night'}
+          ☀️ Day Mode
         </p>
       </motion.div>
       

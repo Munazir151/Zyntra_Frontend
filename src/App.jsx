@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from './components/Header';
-import SettingsButton from './components/SettingsButton';
 import Home from './pages/Home';
+import BrandingDashboard from './pages/BrandingDashboard';
+import WorkplaceDashboard from './pages/WorkplaceDashboard';
 import DailyLog from './pages/DailyLog';
 import Chat from './pages/Chat';
 import Analytics from './pages/Analytics';
@@ -22,7 +23,7 @@ const pageTransition = {
 };
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState('dashboard');
   
   const handleAuthClick = (mode) => {
     setCurrentPage(mode);
@@ -46,8 +47,12 @@ function App() {
         return <SignIn key="signin" onBack={handleSignInToSignUp} onSuccess={handleAuthSuccess} />;
       case 'signup':
         return <SignUp key="signup" onBack={handleSignUpToSignIn} onSuccess={handleAuthSuccess} />;
+      case 'dashboard':
+        return <BrandingDashboard key="dashboard" />;
       case 'home':
         return <Home key="home" />;
+      case 'workplace':
+        return <WorkplaceDashboard key="workplace" />;
       case 'log':
         return <DailyLog key="log" />;
       case 'chat':
@@ -60,9 +65,10 @@ function App() {
   };
   
   const isAuthPage = currentPage === 'signin' || currentPage === 'signup';
+  const isScrollablePage = currentPage === 'dashboard' || currentPage === 'workplace' || currentPage === 'analytics';
   
   return (
-    <div className={`relative w-full h-screen bg-night-blue ${isAuthPage ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+    <div className={`relative w-full h-screen bg-night-blue ${isAuthPage || isScrollablePage ? 'overflow-y-auto' : 'overflow-hidden'}`}>
       {/* Header - Hide on auth pages */}
       {!isAuthPage && (
         <Header 
@@ -86,9 +92,6 @@ function App() {
           {renderPage()}
         </motion.div>
       </AnimatePresence>
-      
-      {/* Settings Button - Hide on auth pages */}
-      {!isAuthPage && <SettingsButton />}
     </div>
   );
 }

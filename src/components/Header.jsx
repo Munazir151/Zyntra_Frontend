@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Trees, BarChart3, MessageCircle, PlusCircle, LogOut } from 'lucide-react';
+import { Trees, BarChart3, MessageCircle, PlusCircle, Menu, X, User, LogOut, LayoutDashboard, Briefcase } from 'lucide-react';
 import Logo from '../images/Logo.png';
 
 const Header = ({ currentPage, onNavigate, onAuthClick }) => {
@@ -51,7 +51,9 @@ const Header = ({ currentPage, onNavigate, onAuthClick }) => {
   };
   
   const navItems = [
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'home', icon: Trees, label: 'Forest' },
+    { id: 'workplace', icon: Briefcase, label: 'Workplace' },
     { id: 'analytics', icon: BarChart3, label: 'Stats' },
     { id: 'chat', icon: MessageCircle, label: 'Chat' },
     { id: 'log', icon: PlusCircle, label: 'Log' },
