@@ -106,7 +106,7 @@ const GaitRecognition = ({ userRole = 'user' }) => {
 
       console.log('Uploading file:', selectedFile.name, 'Size:', selectedFile.size);
 
-      const uploadResponse = await fetch('https://aaa95094eca4.ngrok-free.app/gait/upload-cctv-video', {
+      const uploadResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gait/upload-cctv-video`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -169,7 +169,7 @@ const GaitRecognition = ({ userRole = 'user' }) => {
         console.log(`Checking status (attempt ${attempts}/${maxAttempts}) for log_id: ${logId}...`);
         setUploadStatus({ type: 'success', message: `Processing video... (${attempts * 2}s elapsed)` });
 
-        const statusResponse = await fetch(`https://aaa95094eca4.ngrok-free.app/gait/recognition-status/${logId}`, {
+        const statusResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gait/recognition-status/${logId}`, {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'accept': 'application/json',
@@ -222,7 +222,7 @@ const GaitRecognition = ({ userRole = 'user' }) => {
               // Get download URL
               let downloadUrl = null;
               try {
-                const downloadResponse = await fetch(`https://aaa95094eca4.ngrok-free.app/gait/download-processed-video/${logId}`, {
+                const downloadResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gait/download-processed-video/${logId}`, {
                   headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'accept': 'application/json',

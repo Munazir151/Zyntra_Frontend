@@ -26,7 +26,7 @@ const UserProfile = () => {
         return;
       }
 
-      const statusResponse = await fetch('https://aaa95094eca4.ngrok-free.app/gait/profile-status', {
+      const statusResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gait/profile-status`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'accept': 'application/json',
@@ -40,7 +40,7 @@ const UserProfile = () => {
         console.log('Profile status:', statusData);
 
         if (statusData.status !== 'not_found') {
-          const profileResponse = await fetch('https://aaa95094eca4.ngrok-free.app/gait/user-profile', {
+          const profileResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gait/user-profile`, {
             headers: {
               'Authorization': `Bearer ${authToken}`,
               'accept': 'application/json',
@@ -70,7 +70,7 @@ const UserProfile = () => {
     try {
       const authToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
       
-      const response = await fetch('https://aaa95094eca4.ngrok-free.app/gait/user-profile', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gait/user-profile`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -114,7 +114,7 @@ const UserProfile = () => {
       console.log(`📊 Checking profile status (attempt ${attempts}/${maxAttempts})...`);
       
       try {
-        const statusResponse = await fetch('https://aaa95094eca4.ngrok-free.app/gait/profile-status', {
+        const statusResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gait/profile-status`, {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'accept': 'application/json',
@@ -230,7 +230,7 @@ const UserProfile = () => {
 
       console.log('Uploading file:', selectedFile.name);
 
-      const uploadResponse = await fetch('https://aaa95094eca4.ngrok-free.app/gait/upload-user-video', {
+      const uploadResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/gait/upload-user-video`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,

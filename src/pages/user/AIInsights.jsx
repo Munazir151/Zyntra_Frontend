@@ -39,7 +39,7 @@ const AIInsights = () => {
         return;
       }
 
-      const response = await fetch('https://aaa95094eca4.ngrok-free.app/wellness/ai-insights', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/wellness/ai-insights`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',

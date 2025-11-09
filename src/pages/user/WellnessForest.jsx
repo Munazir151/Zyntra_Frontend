@@ -39,7 +39,7 @@ const WellnessForest = () => {
         return;
       }
 
-      const response = await fetch('https://aaa95094eca4.ngrok-free.app/wellness/forest', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/wellness/forest`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',

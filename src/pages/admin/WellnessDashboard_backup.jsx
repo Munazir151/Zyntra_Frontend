@@ -52,7 +52,7 @@ const WellnessDashboard = () => {
       }
 
       // Fetch all employees
-      const employeesResponse = await fetch('https://aaa95094eca4.ngrok-free.app/api/admins/me/employees', {
+      const employeesResponse = await fetch('${import.meta.env.VITE_API_BASE_URL}/api/admins/me/employees', {
         method: 'GET',
         headers: {
           'accept': 'application/json',
@@ -72,7 +72,7 @@ const WellnessDashboard = () => {
       // Fetch dashboard data for each employee
       const dashboardPromises = employeesList.map(async (emp) => {
         try {
-          const dashResponse = await fetch(`https://aaa95094eca4.ngrok-free.app/wellness/dashboard?user_id=${emp.id}`, {
+          const dashResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/wellness/dashboard?user_id=${emp.id}`, {
             method: 'GET',
             headers: {
               'accept': 'application/json',
