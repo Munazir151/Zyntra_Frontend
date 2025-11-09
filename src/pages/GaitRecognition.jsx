@@ -501,25 +501,10 @@ const GaitRecognition = ({ userRole = 'user' }) => {
               ))}
             </div>
 
-            {/* Video Preview & Download */}
-            {analysisResult.processedVideoUrl ? (
+            {/* Download Section */}
+            {analysisResult.processedVideoUrl && (
               <div className="mb-8">
-                <h3 className="text-xl font-bold text-forest-light mb-4">Processed Video</h3>
-                {/* Video Preview */}
-                <div className="mb-6 bg-black rounded-xl overflow-hidden border-2 border-forest-light/30 shadow-2xl">
-                  <video 
-                    controls 
-                    autoPlay
-                    className="w-full max-h-[600px] object-contain"
-                    src={analysisResult.processedVideoUrl}
-                    onLoadedData={() => console.log('Video loaded successfully')}
-                    onError={(e) => console.error('Video load error:', e)}
-                  >
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
-                
-                {/* Download Button */}
+                <h3 className="text-xl font-bold text-forest-light mb-4">Download Processed Video</h3>
                 <a
                   href={analysisResult.processedVideoUrl}
                   download={`processed_log_${analysisResult.logId}.mp4`}
@@ -533,28 +518,6 @@ const GaitRecognition = ({ userRole = 'user' }) => {
                 <p className="text-sm text-forest-light/60 mt-2">
                   Download link expires in 1 hour
                 </p>
-              </div>
-            ) : (
-              analysisResult && !analysisResult.processedVideoUrl && (
-                <div className="mb-8 p-4 bg-forest-light/10 border border-forest-light/20 rounded-xl text-center">
-                  <p className="text-forest-light/70">
-                    Processed video is being prepared. Please refresh or try downloading later.
-                  </p>
-                </div>
-              )
-            )}
-
-            {isAdmin && (
-              <div className="mt-8 p-6 bg-sunlight-yellow/10 border border-sunlight-yellow/30 rounded-xl">
-                <h4 className="text-lg font-bold text-sunlight-yellow mb-3">Admin Actions</h4>
-                <div className="flex gap-4">
-                  <button className="px-6 py-2 bg-sunlight-yellow text-forest-900 rounded-lg font-semibold hover:bg-sunlight-yellow/90 transition-all">
-                    Export Report
-                  </button>
-                  <button className="px-6 py-2 border border-sunlight-yellow/50 text-sunlight-yellow rounded-lg font-semibold hover:bg-sunlight-yellow/10 transition-all">
-                    View Full Analytics
-                  </button>
-                </div>
               </div>
             )}
           </motion.div>

@@ -1,10 +1,9 @@
-import React, { Suspense, useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
-import { motion } from 'framer-motion';
-import { Leaf, Zap, Heart, Droplets, Wind } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Leaf, Zap, Heart, Droplets, Wind, Users, X, ArrowLeft, Eye, TrendingUp, TrendingDown, Trees } from 'lucide-react';
 import ForestScene from '../../components/ForestScene';
-import ForestFeedback from '../../components/ForestFeedback';
 import useStore from '../../store/useStore';
 
 const EcoScoreOrb = ({ score, maxScore }) => {
@@ -165,39 +164,65 @@ const LoadingScreen = () => (
         animate={{ rotate: 360 }}
         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
       />
-      <p className="text-forest-light text-lg font-light">Growing your forest...</p>
+      <p className="text-forest-light text-lg font-light">Getting forest of employees...</p>
     </motion.div>
   </div>
 );
 
 const Home = () => {
-  const { ecoScore, maxEcoScore, forestHealth, activities } = useStore();
-  const [showStats, setShowStats] = useState(true);
-  
-  // Calculate eco actions from recent activities
-  const ecoActions = useMemo(() => {
-    const recentActivities = activities.slice(-10); // Last 10 activities
-    
-    return {
-      lightsOff: recentActivities.some(a => a.type === 'eco-action' && a.notes?.toLowerCase().includes('light')),
-      exercise: recentActivities.some(a => a.type === 'exercise' || a.type === 'meditation'),
-      ecoTravel: recentActivities.some(a => a.type === 'walk' || (a.type === 'eco-action' && a.notes?.toLowerCase().includes('travel'))),
-      longWork: recentActivities.some(a => a.type === 'work' && a.duration > 4),
+  const [allForests, setAllForests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'detail'
+
+  // Fetch all employee forests
+  useEffect(() => {
+    const fetchAllForests = async () => {
+      try {
+        const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+        if (!token) {
+          console.log('No token found');
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('https://aaa95094eca4.ngrok-free.app/wellness/forests', {
+          method: 'GET',
+          headers: {
+            'accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setAllForests(data.forests || []);
+          console.log('All forests loaded:', data);
+        }
+      } catch (err) {
+        console.error('Error fetching forests:', err);
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [activities]);
-  
-  // Calculate screen time from recent activities
-  const screenTime = useMemo(() => {
-    const today = new Date().toDateString();
-    const todayActivities = activities.filter(a => new Date(a.date).toDateString() === today);
-    const phoneTime = todayActivities
-      .filter(a => a.type === 'phone')
-      .reduce((sum, a) => sum + a.duration, 0);
-    const workTime = todayActivities
-      .filter(a => a.type === 'work' || a.type === 'sedentary')
-      .reduce((sum, a) => sum + a.duration, 0);
-    return phoneTime + workTime * 0.5; // Work counts as 50% screen time
-  }, [activities]);
+
+    fetchAllForests();
+  }, []);
+
+  const getHealthColor = (score) => {
+    if (score >= 80) return 'text-green-400';
+    if (score >= 60) return 'text-yellow-400';
+    if (score >= 40) return 'text-orange-400';
+    return 'text-red-400';
+  };
+
+  const getHealthBg = (score) => {
+    if (score >= 80) return 'from-green-500 to-emerald-600';
+    if (score >= 60) return 'from-yellow-500 to-amber-600';
+    if (score >= 40) return 'from-orange-500 to-red-500';
+    return 'from-red-500 to-rose-600';
+  };
 
   const statVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -212,133 +237,285 @@ const Home = () => {
     })
   };
 
-  const stats = [
-    { icon: Leaf, label: 'Trees', value: Math.floor(forestHealth * 30), color: 'from-green-400 to-emerald-600' },
-    { icon: Heart, label: 'Health', value: Math.floor(forestHealth * 100), color: 'from-red-400 to-rose-600' },
-    { icon: Zap, label: 'Energy', value: Math.floor((1 - screenTime / 100) * 100), color: 'from-yellow-400 to-amber-600' },
-    { icon: Droplets, label: 'Water', value: Math.floor(ecoScore * 3), color: 'from-blue-400 to-cyan-600' },
-  ];
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
-  return (
-    <div className="relative w-full h-screen overflow-hidden bg-gradient-to-br from-night-blue via-forest-dark to-night-deep">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div 
-          className="absolute top-20 right-1/4 w-96 h-96 bg-forest-green rounded-full mix-blend-screen opacity-5"
-          animate={{ y: [0, 50, 0], x: [0, 30, 0] }}
-          transition={{ duration: 15, repeat: Infinity }}
-        />
-        <motion.div 
-          className="absolute bottom-20 left-1/4 w-80 h-80 bg-sunlight-yellow rounded-full mix-blend-screen opacity-3"
-          animate={{ y: [0, -50, 0], x: [0, -30, 0] }}
-          transition={{ duration: 20, repeat: Infinity, delay: 1 }}
-        />
-      </div>
+  // Grid View - Show all employee forests as previews
+  if (viewMode === 'grid') {
+    return (
+      <div className="relative w-full min-h-screen bg-gradient-to-br from-night-blue via-forest-dark to-night-deep p-8 pt-32">
+        {/* Header */}
+        <motion.div
+          className="mb-8"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+                <Users className="w-10 h-10 text-forest-light" />
+                Employee Wellness Forests
+              </h1>
+              <p className="text-forest-light">Overview of all employee wellness metrics</p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-bold text-white">{allForests.length}</p>
+              <p className="text-forest-light text-sm">Total Employees</p>
+            </div>
+          </div>
+        </motion.div>
 
-      {/* Forest Feedback Notifications */}
-      <ForestFeedback 
-        ecoActions={ecoActions}
-        screenTime={screenTime}
-        forestHealth={forestHealth}
-      />
-      
-      {/* 3D Forest Canvas */}
-      <Canvas shadows className="w-full h-full">
-        <Suspense fallback={null}>
-          <PerspectiveCamera makeDefault position={[0, 5, 15]} fov={60} />
-          <OrbitControls 
-            enableRotate={true}
-            enablePan={true}
-            enableZoom={true}
-            minDistance={8}
-            maxDistance={25}
-            maxPolarAngle={Math.PI / 2}
-            minPolarAngle={0}
-            enableDamping={true}
-            dampingFactor={0.05}
-            rotateSpeed={0.5}
-            zoomSpeed={0.8}
-            autoRotate={false}
-          />
-          <ForestScene 
-            health={forestHealth} 
-            timeOfDay="day"
-            ecoActions={ecoActions}
-            screenTime={screenTime}
-          />
-        </Suspense>
-      </Canvas>
+        {/* No Data Message */}
+        {allForests.length === 0 && (
+          <div className="text-center py-20">
+            <p className="text-white text-xl mb-2">No employee forests found</p>
+            <p className="text-forest-light">Employees need to set up their wellness forests first.</p>
+          </div>
+        )}
 
-      {/* Stats Grid - Bottom Left */}
-      <motion.div
-        className="absolute bottom-8 left-8 grid grid-cols-2 gap-4 z-10"
-        initial="hidden"
-        animate="visible"
-      >
-        {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
+        {/* Forests Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {allForests.map((forest, index) => (
             <motion.div
-              key={i}
-              variants={statVariants}
-              custom={i}
-              className="glass-card px-4 py-3 rounded-2xl backdrop-blur-xl border border-white border-opacity-10 hover:border-opacity-30 transition-all group hover:scale-110"
+              key={forest.user_id}
+              className="glass-card rounded-2xl overflow-hidden border border-white border-opacity-10 hover:border-opacity-30 transition-all cursor-pointer group"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ scale: 1.02, y: -5 }}
+              onClick={() => {
+                setSelectedEmployee(forest);
+                setViewMode('detail');
+              }}
             >
-              <div className="flex items-center gap-2">
-                <motion.div 
-                  className={`p-2 rounded-lg bg-gradient-to-br ${stat.color} bg-opacity-20`}
-                  animate={{ rotate: [0, 5, 0, -5, 0] }}
-                  transition={{ duration: 4, repeat: Infinity }}
-                >
-                  <Icon className="w-4 h-4 text-white" />
-                </motion.div>
-                <div className="text-left">
-                  <p className="text-forest-light text-xs font-light">{stat.label}</p>
-                  <motion.p 
-                    className={`text-lg font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
+              {/* Mini Canvas Preview */}
+              <div className="h-48 bg-gradient-to-br from-forest-dark to-night-blue relative overflow-hidden">
+                <Canvas>
+                  <Suspense fallback={null}>
+                    <PerspectiveCamera makeDefault position={[0, 5, 15]} fov={60} />
+                    <ForestScene 
+                      health={(forest.forest_health_score || 50) / 100} 
+                      timeOfDay="day"
+                      wellnessData={forest}
+                    />
+                  </Suspense>
+                </Canvas>
+                <div className="absolute top-2 right-2">
+                  <motion.div
+                    className="bg-black bg-opacity-50 backdrop-blur-sm rounded-full p-2"
+                    whileHover={{ scale: 1.1 }}
                   >
-                    {stat.value}
-                  </motion.p>
+                    <Eye className="w-4 h-4 text-white" />
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* Employee Info */}
+              <div className="p-4">
+                <h3 className="text-white font-bold text-lg mb-2">{forest.username || `User ${forest.user_id}`}</h3>
+                
+                {/* Health Score */}
+                <div className="mb-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-gray-300 text-sm">Forest Health</span>
+                    <span className={`text-lg font-bold ${getHealthColor(forest.forest_health_score || 50)}`}>
+                      {forest.forest_health_score || 50}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full bg-gradient-to-r ${getHealthBg(forest.forest_health_score || 50)} transition-all`}
+                      style={{ width: `${forest.forest_health_score || 50}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-white bg-opacity-5 rounded-lg p-2">
+                    <p className="text-gray-400">Trees</p>
+                    <p className="text-white font-bold">{forest.total_trees || 0}</p>
+                  </div>
+                  <div className="bg-white bg-opacity-5 rounded-lg p-2">
+                    <p className="text-gray-400">Growth</p>
+                    <p className={`font-bold flex items-center gap-1 ${(forest.growth_rate || 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {(forest.growth_rate || 0) > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {Math.abs(forest.growth_rate || 0).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="mt-3">
+                  {(forest.forest_health_score || 50) >= 80 && (
+                    <span className="inline-block bg-green-500 bg-opacity-20 text-green-400 text-xs px-2 py-1 rounded-full">
+                      ✨ Excellent
+                    </span>
+                  )}
+                  {(forest.forest_health_score || 50) >= 60 && (forest.forest_health_score || 50) < 80 && (
+                    <span className="inline-block bg-yellow-500 bg-opacity-20 text-yellow-400 text-xs px-2 py-1 rounded-full">
+                      🌿 Good
+                    </span>
+                  )}
+                  {(forest.forest_health_score || 50) >= 40 && (forest.forest_health_score || 50) < 60 && (
+                    <span className="inline-block bg-orange-500 bg-opacity-20 text-orange-400 text-xs px-2 py-1 rounded-full">
+                      ⚠️ Needs Attention
+                    </span>
+                  )}
+                  {(forest.forest_health_score || 50) < 40 && (
+                    <span className="inline-block bg-red-500 bg-opacity-20 text-red-400 text-xs px-2 py-1 rounded-full">
+                      🚨 Critical
+                    </span>
+                  )}
                 </div>
               </div>
             </motion.div>
-          );
-        })}
-      </motion.div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-      {/* Info Panel - Bottom Right */}
-      <motion.div
-        className="absolute bottom-8 right-8 glass-card px-6 py-4 rounded-2xl backdrop-blur-xl border border-white border-opacity-10 z-10"
-        initial={{ opacity: 0, x: 30 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.5, duration: 0.6 }}
-        onMouseEnter={() => setShowStats(true)}
-      >
-        <div className="flex items-center gap-3 mb-2">
-          <Wind className="w-5 h-5 text-sunlight-yellow" />
-          <p className="text-white text-sm font-light">
-            Forest Mode: <span className="text-forest-light font-medium">Active</span>
+  // Detail View - Show single employee's full forest
+  if (viewMode === 'detail' && selectedEmployee) {
+    return (
+      <div className="relative w-full h-screen overflow-hidden bg-gradient-to-br from-night-blue via-forest-dark to-night-deep">
+        {/* Back Button */}
+        <motion.button
+          className="absolute top-24 left-6 z-50 glass-card px-4 py-2 rounded-xl border border-white border-opacity-20 hover:border-opacity-40 transition-all flex items-center gap-2"
+          onClick={() => setViewMode('grid')}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <ArrowLeft className="w-5 h-5 text-forest-light" />
+          <span className="text-white font-medium">Back to Grid</span>
+        </motion.button>
+
+        {/* Employee Info Header */}
+        <motion.div
+          className="absolute top-24 right-6 z-50 glass-card px-4 py-2 rounded-xl border border-white border-opacity-20"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h2 className="text-white font-semibold text-base mb-1">{selectedEmployee.username || `User ${selectedEmployee.user_id}`}</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-300 text-xs">Health:</span>
+            <span className={`text-lg font-bold ${getHealthColor(selectedEmployee.forest_health_score || 50)}`}>
+              {selectedEmployee.forest_health_score || 50}%
+            </span>
+          </div>
+        </motion.div>
+
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div 
+            className="absolute top-20 right-1/4 w-96 h-96 bg-forest-green rounded-full mix-blend-screen opacity-5"
+            animate={{ y: [0, 50, 0], x: [0, 30, 0] }}
+            transition={{ duration: 15, repeat: Infinity }}
+          />
+          <motion.div 
+            className="absolute bottom-20 left-1/4 w-80 h-80 bg-sunlight-yellow rounded-full mix-blend-screen opacity-3"
+            animate={{ y: [0, -50, 0], x: [0, -30, 0] }}
+            transition={{ duration: 20, repeat: Infinity, delay: 1 }}
+          />
+        </div>
+        
+        {/* 3D Forest Canvas */}
+        <Canvas shadows className="w-full h-full">
+          <Suspense fallback={null}>
+            <PerspectiveCamera makeDefault position={[0, 5, 15]} fov={60} />
+            <OrbitControls 
+              enableRotate={true}
+              enablePan={true}
+              enableZoom={true}
+              minDistance={8}
+              maxDistance={25}
+              maxPolarAngle={Math.PI / 2}
+              minPolarAngle={0}
+              enableDamping={true}
+              dampingFactor={0.05}
+              rotateSpeed={0.5}
+              zoomSpeed={0.8}
+              autoRotate={false}
+            />
+            <ForestScene 
+              health={(selectedEmployee.forest_health_score || 50) / 100} 
+              timeOfDay="day"
+              wellnessData={selectedEmployee}
+            />
+          </Suspense>
+        </Canvas>
+
+        {/* Quick Stats - Bottom Left */}
+        <motion.div
+          className="absolute bottom-8 left-8 grid grid-cols-2 gap-4 z-10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className="glass-card px-4 py-3 rounded-2xl backdrop-blur-xl border border-white border-opacity-10">
+            <div className="flex items-center gap-2">
+              <Trees className="w-5 h-5 text-green-400" />
+              <div>
+                <p className="text-forest-light text-xs">Total Trees</p>
+                <p className="text-white font-bold text-lg">{selectedEmployee.total_trees || 0}</p>
+              </div>
+            </div>
+          </div>
+          <div className="glass-card px-4 py-3 rounded-2xl backdrop-blur-xl border border-white border-opacity-10">
+            <div className="flex items-center gap-2">
+              {(selectedEmployee.growth_rate || 0) > 0 ? (
+                <TrendingUp className="w-5 h-5 text-green-400" />
+              ) : (
+                <TrendingDown className="w-5 h-5 text-red-400" />
+              )}
+              <div>
+                <p className="text-forest-light text-xs">Growth Rate</p>
+                <p className={`font-bold text-lg ${(selectedEmployee.growth_rate || 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {(selectedEmployee.growth_rate || 0) > 0 ? '+' : ''}{(selectedEmployee.growth_rate || 0).toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Info Panel - Bottom Right */}
+        <motion.div
+          className="absolute bottom-8 right-8 glass-card px-6 py-4 rounded-2xl backdrop-blur-xl border border-white border-opacity-10 z-10"
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Wind className="w-5 h-5 text-sunlight-yellow" />
+            <p className="text-white text-sm font-light">
+              Employee Forest View
+            </p>
+          </div>
+          <p className="text-forest-light text-xs opacity-70">
+            ☀️ {selectedEmployee.time_of_day || 'day'} • Drag to explore • Scroll to zoom
           </p>
-        </div>
-        <p className="text-forest-light text-xs opacity-70">
-          ☀️ Daytime • Drag to explore • Scroll to zoom
-        </p>
-      </motion.div>
+        </motion.div>
 
-      {/* Hint - Center Bottom */}
-      <motion.div
-        className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-10"
-        animate={{ opacity: [0.4, 0.8, 0.4] }}
-        transition={{ duration: 3, repeat: Infinity }}
-      >
-        <div className="glass-card px-4 py-2 rounded-full text-forest-light text-xs font-light">
-          🌱 Interact with your digital forest
-        </div>
-      </motion.div>
-    </div>
-  );
-};
+        {/* Hint - Below Header */}
+        <motion.div
+          className="absolute top-36 left-1/2 transform -translate-x-1/2 z-10"
+          animate={{ opacity: [0.4, 0.8, 0.4] }}
+          transition={{ duration: 3, repeat: Infinity }}
+        >
+          <div className="glass-card px-4 py-2 rounded-full text-forest-light text-xs font-light">
+            🌱 Viewing {selectedEmployee.username || 'employee'}'s wellness forest
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Fallback
+  return null;
+};;
 
 export default Home;

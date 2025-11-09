@@ -2,7 +2,7 @@ import React, { Suspense, useMemo, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Leaf, Zap, Heart, Droplets, Wind, Sun, Moon, Trees, ChevronDown, ChevronUp } from 'lucide-react';
+import { Leaf, Zap, Heart, Droplets, Wind, Sun, Moon, Trees, ChevronDown, ChevronUp, BookOpen, X, CheckCircle, Circle, Lock } from 'lucide-react';
 import ForestScene from '../../components/ForestScene';
 import ForestFeedback from '../../components/ForestFeedback';
 import useStore from '../../store/useStore';
@@ -177,6 +177,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [timeOfDay, setTimeOfDay] = useState('day'); // User controllable day/night
   const [isInfoPanelExpanded, setIsInfoPanelExpanded] = useState(true); // Info panel toggle
+  const [isRulesPanelExpanded, setIsRulesPanelExpanded] = useState(false); // Rules panel toggle
 
   // Fetch wellness forest data
   useEffect(() => {
@@ -461,6 +462,256 @@ const Home = () => {
               </div>
             </div>
               </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      )}
+
+      {/* Rules Button - Below Forest Details (Right Side, stacked) */}
+      {wellnessData && (
+        <motion.div
+          className="absolute top-24 right-8 z-10 mt-2"
+          style={{ marginTop: isInfoPanelExpanded ? '480px' : '70px' }}
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+        >
+          <motion.button
+            onClick={() => setIsRulesPanelExpanded(!isRulesPanelExpanded)}
+            className="glass-card px-4 py-3 rounded-2xl backdrop-blur-xl border border-white border-opacity-10 hover:bg-white hover:bg-opacity-10 transition-all flex items-center gap-2 w-full"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <BookOpen className="w-5 h-5 text-forest-light" />
+            <span className="text-forest-light font-semibold text-sm">Rules & Achievements</span>
+          </motion.button>
+
+          {/* Rules Panel - Expandable (opens below the button) */}
+          <AnimatePresence>
+            {isRulesPanelExpanded && (
+              <motion.div
+                className="glass-card p-6 rounded-2xl backdrop-blur-xl border border-white border-opacity-10 max-w-md max-h-[60vh] overflow-y-auto mt-2"
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-forest-light font-bold text-lg flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                Forest Rules & Progress
+              </h3>
+              <button
+                onClick={() => setIsRulesPanelExpanded(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current Score */}
+            <div className="bg-white bg-opacity-10 rounded-lg p-4 mb-4">
+              <p className="text-white font-bold text-2xl text-center">
+                {wellnessData.forest_health_score}%
+              </p>
+              <p className="text-forest-light text-xs text-center mt-1">Your Forest Health Score</p>
+            </div>
+
+            {/* Achievement Levels */}
+            <div className="space-y-3 mb-4">
+              <p className="text-forest-light font-semibold text-sm mb-2">🏆 Achievement Levels</p>
+              
+              {/* Level 90-100 */}
+              <div className={`bg-white bg-opacity-5 rounded-lg p-3 border-l-4 ${wellnessData.forest_health_score >= 90 ? 'border-green-400' : 'border-gray-500'}`}>
+                <div className="flex items-start gap-2">
+                  {wellnessData.forest_health_score >= 90 ? (
+                    <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <Lock className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-white font-semibold text-sm">Paradise (90-100%)</p>
+                    <p className="text-gray-300 text-xs mt-1">🌸 All features unlocked • 90% healthy trees</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Level 80-89 */}
+              <div className={`bg-white bg-opacity-5 rounded-lg p-3 border-l-4 ${wellnessData.forest_health_score >= 80 ? 'border-green-400' : 'border-gray-500'}`}>
+                <div className="flex items-start gap-2">
+                  {wellnessData.forest_health_score >= 80 ? (
+                    <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <Lock className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-white font-semibold text-sm">Excellent (80-89%)</p>
+                    <p className="text-gray-300 text-xs mt-1">🌸🐦🦋🌊 Flowers, Birds, Butterflies, Stream</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Level 70-79 */}
+              <div className={`bg-white bg-opacity-5 rounded-lg p-3 border-l-4 ${wellnessData.forest_health_score >= 70 ? 'border-yellow-400' : 'border-gray-500'}`}>
+                <div className="flex items-start gap-2">
+                  {wellnessData.forest_health_score >= 70 ? (
+                    <CheckCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <Lock className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-white font-semibold text-sm">Good (70-79%)</p>
+                    <p className="text-gray-300 text-xs mt-1">🐦🦋🌊 Birds, Butterflies, Stream possible</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Level 60-69 */}
+              <div className={`bg-white bg-opacity-5 rounded-lg p-3 border-l-4 ${wellnessData.forest_health_score >= 60 ? 'border-yellow-400' : 'border-gray-500'}`}>
+                <div className="flex items-start gap-2">
+                  {wellnessData.forest_health_score >= 60 ? (
+                    <CheckCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <Lock className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-white font-semibold text-sm">Moderate (60-69%)</p>
+                    <p className="text-gray-300 text-xs mt-1">🦋 Butterflies unlocked</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Level 40-59 */}
+              <div className={`bg-white bg-opacity-5 rounded-lg p-3 border-l-4 ${wellnessData.forest_health_score >= 40 ? 'border-orange-400' : 'border-gray-500'}`}>
+                <div className="flex items-start gap-2">
+                  {wellnessData.forest_health_score >= 40 ? (
+                    <Circle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <Lock className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-white font-semibold text-sm">Fair (40-59%)</p>
+                    <p className="text-gray-300 text-xs mt-1">⚠️ Needs improvement • Few features</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Level 0-39 */}
+              <div className={`bg-white bg-opacity-5 rounded-lg p-3 border-l-4 border-red-500`}>
+                <div className="flex items-start gap-2">
+                  <Circle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-white font-semibold text-sm">Critical (0-39%)</p>
+                    <p className="text-gray-300 text-xs mt-1">🚨 Urgent attention needed • No special features</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Special Features Unlock Conditions */}
+            <div className="bg-white bg-opacity-5 rounded-lg p-4 space-y-2">
+              <p className="text-forest-light font-semibold text-sm mb-3">🎁 Special Features</p>
+              
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-300">🌸 Flowers</span>
+                <span className={`font-semibold ${wellnessData.has_flowers ? 'text-green-400' : 'text-gray-500'}`}>
+                  {wellnessData.has_flowers ? '✓ Unlocked' : '🔒 Need 80%+'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-300">🐦 Birds</span>
+                <span className={`font-semibold ${wellnessData.has_birds ? 'text-green-400' : 'text-gray-500'}`}>
+                  {wellnessData.has_birds ? '✓ Unlocked' : '🔒 Need 70%+'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-300">🦋 Butterflies</span>
+                <span className={`font-semibold ${wellnessData.has_butterflies ? 'text-green-400' : 'text-gray-500'}`}>
+                  {wellnessData.has_butterflies ? '✓ Unlocked' : '🔒 Need 60%+'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-300">🌊 Stream</span>
+                <span className={`font-semibold ${wellnessData.has_stream ? 'text-green-400' : 'text-gray-500'}`}>
+                  {wellnessData.has_stream ? '✓ Unlocked' : `🔒 Water ${wellnessData.water_level}%/70%`}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-300">🪑 Bench</span>
+                <span className={`font-semibold ${wellnessData.has_bench ? 'text-green-400' : 'text-gray-500'}`}>
+                  {wellnessData.has_bench ? '✓ Unlocked' : `🔒 Air ${wellnessData.air_quality}%/70%`}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-300">🪨 Rocks</span>
+                <span className={`font-semibold ${wellnessData.has_rocks ? 'text-green-400' : 'text-gray-500'}`}>
+                  {wellnessData.has_rocks ? '✓ Unlocked' : '✓ Always present'}
+                </span>
+              </div>
+            </div>
+
+            {/* Environmental Factors */}
+            <div className="bg-white bg-opacity-5 rounded-lg p-4 mt-4 space-y-2">
+              <p className="text-forest-light font-semibold text-sm mb-3">🌍 Environmental Health</p>
+              
+              <div className="space-y-2">
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-300">💧 Water Level (Breaks)</span>
+                    <span className="text-white font-semibold">{wellnessData.water_level}%</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full transition-all"
+                      style={{ width: `${wellnessData.water_level}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-300">🌱 Soil Quality (Ergonomics)</span>
+                    <span className="text-white font-semibold">{wellnessData.soil_quality}%</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full transition-all"
+                      style={{ width: `${wellnessData.soil_quality}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-300">🌬️ Air Quality (Low Stress)</span>
+                    <span className="text-white font-semibold">{wellnessData.air_quality}%</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="bg-cyan-500 h-2 rounded-full transition-all"
+                      style={{ width: `${wellnessData.air_quality}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tips */}
+            <div className="bg-gradient-to-r from-green-500 to-blue-500 bg-opacity-10 rounded-lg p-4 mt-4">
+              <p className="text-white font-semibold text-sm mb-2">💡 Tips to Improve</p>
+              <ul className="text-xs text-gray-300 space-y-1">
+                <li>• Take regular breaks to increase water level</li>
+                <li>• Maintain good posture for better soil quality</li>
+                <li>• Reduce stress for cleaner air</li>
+                <li>• Consistent wellness improves forest health</li>
+              </ul>
+            </div>
+          </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
